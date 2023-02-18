@@ -30,9 +30,16 @@ Route::get('/', function () {
 Route::resource('owners',OwnersController::class)
     ->middleware('auth:admin');//ログインしているかの認証(adminで認証されていたら表示)
 
+Route::prefix('expired-owners')->
+    middleware('auth:admin')->group(function(){
+        Route::get('index', [OwnersController::class, 'expiredOwnerIndex'])->name('expired-owners.index');
+        Route::post('destroy/{owner}', [OwnersController::class, 'expiredOwnerDestroy'])->name('expired-owners.destroy');
+});
+
 Route::get('/dashboard', function () {
     return view('admin.dashboard');
 })->middleware(['auth:admin'])->name('dashboard');
+
 
 Route::get('/register', [RegisteredUserController::class, 'create'])
                 ->middleware('guest')

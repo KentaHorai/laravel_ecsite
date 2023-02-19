@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;//認証機能
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Shop;
 
 class Owner extends Authenticatable//認証機能を継承(Modelから変更)
 {
@@ -41,4 +42,9 @@ class Owner extends Authenticatable//認証機能を継承(Modelから変更)
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    public function shop()
+    {
+        return $this->hasOne(Shop::class);
+    }
 }

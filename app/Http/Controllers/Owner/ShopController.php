@@ -8,8 +8,8 @@ use App\Models\Shop;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use InterventionImage;
-use App\Http\Requests\UploadImageRequest;
-use App\Services\ImageService;
+use App\Http\Requests\UploadImageRequest;//updateメソッドで作成したバリデーションを使用する
+use App\Services\ImageService;//updateメソッドで関数化したImageServiceを使用する
 
 class ShopController extends Controller
 {
@@ -23,7 +23,7 @@ class ShopController extends Controller
 
             $id = $request->route()->parameter('shop'); //shopのid取得
             if(!is_null($id)){ // null判定
-            $shopsOwnerId = Shop::findOrFail($id)->owner->id;
+                $shopsOwnerId = Shop::findOrFail($id)->owner->id;
                 $shopId = (int)$shopsOwnerId; // キャスト 文字列→数値に型変換
                 $ownerId = Auth::id();
                 if($shopId !== $ownerId){ // 同じでなかったら
@@ -51,14 +51,33 @@ class ShopController extends Controller
         return view('owner.shops.edit', compact('shop'));
     }
 
-    public function update(UploadImageRequest $request, $id)
+    public function update(UploadImageRequest $request, $id)//作成したバリデーションを使用する(UploadImageRequest)
     {
+        $request->validate([
+            'name' => 'required|string|max:50',
+            'information' => 'required|string|max:1000',
+            'is_selling' => 'required',
+        ]);
+
         $imageFile = $request->image;
         if(!is_null($imageFile) && $imageFile->isValid() ){
-            $fileNameToStore = ImageService::upload($imageFile, 'shops');    
+            $fileNameToStore = ImageService::upload($imageFile, 'shops');//app\Services\ImageService.phpに関数化(Servicesフォルダ、ImageService.phpファイルは直打ちで作成)
         }
 
-        return redirect()->route('owner.shops.index');
+        $shop = Shop::findOrFail($id);
+        $shop->name = $request->name;
+        $shop->information = $request->information;
+        $shop->is_selling = $request->is_selling;
+        if(!is_null($imageFile) && $imageFile->isValid()){
+            $shop->filename = $fileNameToStore;
+        }
+
+        $shop->save();
+
+        return redirect()
+        ->route('owner.shops.index')
+        ->with(['message' => '店舗情報を更新しました。',
+        'status' => 'info']);
 
     }
 }

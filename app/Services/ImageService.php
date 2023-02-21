@@ -8,7 +8,7 @@ use InterventionImage;
 
 class ImageService
 {
-  public static function upload($imageFile, $folderName){
+  public static function upload($imageFile, $folderName){//staticで記述するとコロン2つで呼び出すことができる
 
     $fileName = uniqid(rand().'_');
     $extension = $imageFile->extension();

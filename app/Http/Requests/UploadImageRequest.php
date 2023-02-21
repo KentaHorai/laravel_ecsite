@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+//リクエストクラスを拡張してエラーメッセージを表示する
 class UploadImageRequest extends FormRequest
 {
     /**
@@ -13,7 +14,7 @@ class UploadImageRequest extends FormRequest
      */
     public function authorize()
     {
-        return true;
+        return true;//基本的にtrueに設定
     }
 
     /**
@@ -21,14 +22,14 @@ class UploadImageRequest extends FormRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules()//バリデーションルールを記述
     {
         return [
             'image'=>'image|mimes:jpg,jpeg,png|max:2048',
         ];
     }
 
-    public function messages()
+    public function messages()//バリデーションエラーが発生した際のエラーメッセージを記述
     {
     return [
       'image' => '指定されたファイルが画像ではありません。',
@@ -37,3 +38,5 @@ class UploadImageRequest extends FormRequest
       ];
     }
 }
+
+//php artisan make:request UploadImageRequest

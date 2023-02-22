@@ -4,10 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
 use Illuminate\Foundation\Auth\User as Authenticatable;//認証機能
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Shop;
+use App\Models\Image;
 
 class Owner extends Authenticatable//認証機能を継承(Modelから変更)
 {
@@ -46,5 +46,10 @@ class Owner extends Authenticatable//認証機能を継承(Modelから変更)
     public function shop()
     {
         return $this->hasOne(Shop::class);
+    }
+
+    public function image()
+    {
+        return $this->hasMany(Image::class);
     }
 }

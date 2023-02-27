@@ -12,6 +12,7 @@ use App\Models\Stock;
 use App\Models\Shop;
 use App\Models\PrimaryCategory;
 use App\Models\Owner;
+use App\Http\Requests\ProductRequest;
 class ProductController extends Controller
 {
     public function __construct()
@@ -20,11 +21,11 @@ class ProductController extends Controller
 
         $this->middleware(function ($request, $next) {
 
-            $id = $request->route()->parameter('product'); 
-            if(!is_null($id)){ 
-            $productsOwnerId = Product::findOrFail($id)->shop->owner->id;//商品からログインしているオーナーのidを取得
-                $productId = (int)$productsOwnerId; 
-                if($productId !== Auth::id()){ 
+            $id = $request->route()->parameter('product');//ルートパラメータを取得
+            if(!is_null($id)){
+                $productsOwnerId = Product::findOrFail($id)->shop->owner->id;//商品からログインしているオーナーのidを取得
+                $productId = (int)$productsOwnerId;
+                if($productId !== Auth::id()){
                     abort(404);
                 }
             }
@@ -81,10 +82,12 @@ class ProductController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(ProductRequest $request)
     {
         // dd($request);
-        $request->validate([
+        //RequestからProductRequestに変更し分離させたため、以下の分は削除
+        //updaateメソッドでも使用する
+        /*$request->validate([
             'name' => 'required|string|max:50',
             'information' => 'required|string|max:1000',
             'price' => 'required|integer',
@@ -98,6 +101,7 @@ class ProductController extends Controller
             'image4' => 'nullable|exists:images,id',
             'is_selling' => 'required'
         ]);
+        */
 
         try{
             DB::transaction(function () use($request) {
@@ -133,17 +137,6 @@ class ProductController extends Controller
     }
 
     /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function show($id)
-    {
-        //
-    }
-
-    /**
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
@@ -151,7 +144,25 @@ class ProductController extends Controller
      */
     public function edit($id)
     {
-        //
+        $product = Product::findOrFail($id);
+        $quantity = Stock::where('product_id', $product->id)
+        ->sum('quantity');
+
+        $shops = Shop::where('owner_id', Auth::id())
+        ->select('id', 'name')
+        ->get();
+
+        $images = Image::where('owner_id', Auth::id())
+        ->select('id', 'title', 'filename')
+        ->orderBy('updated_at', 'desc')
+        ->get();
+
+        $categories = PrimaryCategory::with('secondary')
+        ->get();
+        
+        return view('owner.products.edit',
+        compact('product', 'quantity', 'shops',
+        'images', 'categories'));
     }
 
     /**
@@ -161,9 +172,60 @@ class ProductController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(ProductRequest $request, $id)
     {
-        //
+        $request->validate([//ProductRequestに続いて追加でバリデーションをかける
+            'current_quantity' => 'required|integer',//type="hidden"なので値が変わることはないが、悪意のあるユーザが開発ツールから直接書き換えることが想定されるので、念のためcurrent_quantityにもバリデーションをかける
+        ]);
+
+        $product = Product::findOrFail($id);//ルートパラメータで指定した商品
+        $quantity = Stock::where('product_id', $product->id)//現在の商品の在庫数をもう一度取得
+        ->sum('quantity');
+
+        if($request->current_quantity !== $quantity){//編集を始めた段階の在庫数と更新処理をかけようとしている段階の在庫数が異なるなら
+            $id = $request->route()->parameter('product');//ルートパラメータを取得
+            return redirect()->route('owner.products.edit', [ 'product' => $id])//ルートパラメータを保持した状態で編集画面に戻る
+            ->with(['message' => '在庫数が変更されています。再度確認してください。',
+            'status' => 'alert']);            
+        }else{//在庫数が更新されていないなら
+            try{
+                DB::transaction(function () use($request, $product) {
+                    
+                    $product->name = $request->name;//storeメソッドの際は、Product::createで新規作成をしたが、既にある商品の情報を更新するため、このように書く
+                    $product->information = $request->information;
+                    $product->price = $request->price;
+                    $product->sort_order = $request->sort_order;
+                    $product->shop_id = $request->shop_id;
+                    $product->secondary_category_id = $request->category;
+                    $product->image1 = $request->image1;
+                    $product->image2 = $request->image2;
+                    $product->image3 = $request->image3;
+                    $product->image4 = $request->image4;
+                    $product->is_selling = $request->is_selling;
+                    $product->save();//createで作成しておらず保存されていないため、saveしてデータベースに保存する必要がある
+
+                    if($request->type === \Constant::PRODUCT_LIST['add']){//use文か\のどちらかを使用して定数を読み込む
+                        $newQuantity = $request->quantity;
+                    }
+                    if($request->type === \Constant::PRODUCT_LIST['reduce']){
+                        $newQuantity = $request->quantity * -1;
+                    }
+                    Stock::create([
+                        'product_id' => $product->id,
+                        'type' => $request->type,
+                        'quantity' => $newQuantity
+                    ]);
+                }, 2);
+            }catch(Throwable $e){
+                Log::error($e);
+                throw $e;
+            }
+    
+            return redirect()
+            ->route('owner.products.index')
+            ->with(['message' => '商品情報を更新しました。',
+            'status' => 'info']);
+        }
     }
 
     /**

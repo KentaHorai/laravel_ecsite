@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Owner;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Image;
+use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\UploadImageRequest;
 use App\Services\ImageService;
@@ -105,9 +106,37 @@ class ImageController extends Controller
     public function destroy($id)
     {
         $image = Image::findOrFail($id);
+        
+        $imageInProducts = Product::where('image1', $image->id)//削除したい画像が商品画像に使用されていたら
+        ->orWhere('image2', $image->id)
+        ->orWhere('image3', $image->id)
+        ->orWhere('image4', $image->id)
+        ->get();//画像が使用されている商品の情報を全て取得
+
+        if($imageInProducts){//変数の中に値が入っていたら
+            $imageInProducts->each(function($product) use($image){//$imageInProductsはCollection型のため、メソッドを繋げることができる(eachメソッドでCollectionの中の1つずつの要素に処理ができる)
+                if($product->image1 === $image->id){//削除したい画像がimage1に設定されていたら
+                    $product->image1 = null;
+                    $product->save();
+                }
+                if($product->image2 === $image->id){
+                    $product->image2 = null;
+                    $product->save();
+                }
+                if($product->image3 === $image->id){
+                    $product->image3 = null;
+                    $product->save();
+                }
+                if($product->image4 === $image->id){
+                    $product->image4 = null;
+                    $product->save();
+                }//全ての商品のそれぞれimage1からimage4に対してチェックする
+            });
+        }
+        
         $filePath = 'public/products/' . $image->filename;
 
-        if(Storage::exists($filePath)){///ファイルパスがあったら
+        if(Storage::exists($filePath)){///ファイルパスがあったら(ストレージに画像があったら)
             Storage::delete($filePath);
         }
 

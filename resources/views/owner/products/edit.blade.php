@@ -90,7 +90,6 @@
                             <x-select-image :images="$images" currentId="{{$product->image2}}" currentImage="{{$product->imageSecond->filename ?? ''}}" name="image2" />
                             <x-select-image :images="$images" currentId="{{$product->image3}}" currentImage="{{$product->imageThird->filename ?? ''}}" name="image3" />
                             <x-select-image :images="$images" currentId="{{$product->image4}}" currentImage="{{$product->imageFourth->filename ?? ''}}" name="image4" />
-                            <x-select-image :images="$images" name="image5" />
                             <div class="p-2 w-1/2 mx-auto">
                                 <div class="relative flex justify-around">
                                 <div><input type="radio" name="is_selling" value="1" class="mr-2" @if($product->is_selling === 1){ checked } @endif>販売中</div>
@@ -128,7 +127,6 @@
           const modal = e.target.dataset.modal
           document.getElementById(imageName + '_thumbnail').src = imagePath + '/' + imageFile
           document.getElementById(imageName + '_hidden').value = imageId
-          MicroModal.close(modal);
       }, )
       })
 

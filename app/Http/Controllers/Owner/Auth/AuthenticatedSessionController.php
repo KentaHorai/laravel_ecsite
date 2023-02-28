@@ -49,10 +49,10 @@ class AuthenticatedSessionController extends Controller
     {
         Auth::guard('owners')->logout();
 
-        $request->session()->invalidate();
+        $request->session()->invalidate();//セッションを無効化
 
-        $request->session()->regenerateToken();
+        $request->session()->regenerateToken();//トークンを再生成
 
-        return redirect('/owner');
+        return redirect('/owner/login');//ログイン画面にリダイレクト
     }
 }
